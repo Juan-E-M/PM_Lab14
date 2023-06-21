@@ -28,6 +28,7 @@ class viewControllerBuscar: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     var peliculas = [Peliculas]()
+    var usuario: Users?
     
     @IBOutlet weak var txtBuscar: UITextField!
     @IBOutlet weak var tablaPeliculas: UITableView!
@@ -58,6 +59,7 @@ class viewControllerBuscar: UIViewController, UITableViewDelegate, UITableViewDa
         dismiss(animated: true, completion: nil)
     }
     
+    //PETICIONES URL
     func cargarPeliculas(ruta: String, completed: @escaping () -> ()) {
         let url = URL(string: ruta)
         URLSession.shared.dataTask(with: url!) { (data, response, error) in
@@ -73,7 +75,30 @@ class viewControllerBuscar: UIViewController, UITableViewDelegate, UITableViewDa
             }
         }.resume()
     }
+    
+    @IBAction func editarUser(_ sender: Any) {
+        performSegue(withIdentifier: "segueEditarPerfil", sender: self.usuario)
+    }
+    
+    
+    func eliminarPelicula(pelicula: Peliculas, completed: @escaping () -> ()) {
+        guard let url = URL(string: "http://localhost:3000/peliculas/\(pelicula.id)") else {
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let error = error {
+                print("Error al eliminar la película: \(error)")
+            } else {
+                completed()
+            }
+        }.resume()
+    }
 
+    //FUNCIONES TABLEVIEW
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return peliculas.count
     }
@@ -83,7 +108,6 @@ class viewControllerBuscar: UIViewController, UITableViewDelegate, UITableViewDa
         cell.textLabel?.text = "\(peliculas[indexPath.row].nombre)"
         cell.detailTextLabel?.text = "Genero:\(peliculas[indexPath.row].genero) Duracion:\(peliculas[indexPath.row].duracion)"
         return cell
-
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -91,17 +115,55 @@ class viewControllerBuscar: UIViewController, UITableViewDelegate, UITableViewDa
         performSegue(withIdentifier: "segueEditar", sender: pelicula)
     }
     
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+        return .delete
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+
+            let alerta = UIAlertController(title: "Confirmación de eliminación", message: "¿Desea eliminar la película?", preferredStyle: .alert)
+            let btnOK = UIAlertAction(title: "Aceptar", style: .default, handler:     {(UIAlertAction) in
+                let pelicula = self.peliculas[indexPath.row]
+                self.eliminarPelicula(pelicula: pelicula) {
+                    self.peliculas.remove(at: indexPath.row)
+                    let ruta = "http://localhost:3000/peliculas/"
+                    self.cargarPeliculas(ruta: ruta) {
+                        self.tablaPeliculas.reloadData()
+                    }
+                }
+                });
+            alerta.addAction(btnOK)
+            let btnCANCEL = UIAlertAction(title: "Cancelar", style: .default, handler: nil);
+            alerta.addAction(btnCANCEL)
+            present(alerta, animated: true, completion: nil)
+        }
+    }
+
+
+    
+    
     func mostrarAlerta(titulo: String, mensaje: String, accion: String) {
         let alerta = UIAlertController(title: titulo, message: mensaje, preferredStyle: .alert)
         let btnOK = UIAlertAction(title: accion, style: .default, handler: nil); alerta.addAction(btnOK)
         present(alerta, animated: true, completion: nil)
     }
     
+    
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier ==
             "segueEditar" {
             let siguienteVC = segue.destination as! viewControllerAgregar
             siguienteVC.pelicula = sender as? Peliculas
+        }
+        if segue.identifier ==
+            "segueEditarPerfil" {
+            let siguienteVC = segue.destination as! editarPerfilViewController
+            siguienteVC.usuario = sender as? Users
         }
     }
 

@@ -33,6 +33,7 @@ class viewControllerAgregar: UIViewController {
     
     
     var pelicula: Peliculas?
+    var usuario: Users?
     
     @IBAction func btnGuardar(_ sender: Any) {
         let nombre = txtNombre.text!
